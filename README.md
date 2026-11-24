@@ -13,7 +13,7 @@ Part of the work of [Valentina Mașniță](https://valemasnita.com), about the b
 - **Shrinking:** body tracking (MediaPipe Pose) finds the shoulders and torso, which shrink, so the contrast with the oversized parts reads as a homunculus rather than a fisheye.
 - **Diagram:** a thin ring sits on the edge of each distortion (solid where the body grows, dashed where it shrinks), labelled with the part's approximate share of the brain's touch map (rough estimates after Penfield, 1950).
 - **Contact:** a fingertip touching the face or the other hand flares and swells at the point of contact.
-- **Trails, Photo, Record:** feedback trails, still images, and up to 10-second clips, all saved only on the device.
+- **Photo, Record:** still images and up to 10-second clips, saved only on the device.
 - **Smoothing:** a One Euro filter on every tracked part keeps the warp steady when still and responsive when moving.
 - **Privacy:** everything runs in the browser on the visitor's device. The models and WebAssembly files are served from this site; no video leaves the device.
 

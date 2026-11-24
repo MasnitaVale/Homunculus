@@ -31,7 +31,6 @@ export const content = {
   hint: "Show your hands. Touch your face.",
 
   labels: "Diagram",
-  trails: "Trails",
   strength: "Strength",
   photo: "Photo",
   record: "Record",

@@ -15,7 +15,6 @@ uniform vec2 u_size;
 uniform float u_aspect;
 uniform vec4 u_bulge[${SLOTS}];
 uniform vec2 u_shape[${SLOTS}];
-uniform float u_alpha;
 
 void main() {
   // Screen position, origin top-left, mirrored like a real mirror.
@@ -37,12 +36,11 @@ void main() {
     }
   }
 
-  gl_FragColor = vec4(texture2D(u_video, clamp(p, 0.0, 1.0)).rgb, u_alpha);
+  gl_FragColor = texture2D(u_video, clamp(p, 0.0, 1.0));
 }
 `;
 
-// Draws straight onto the visible canvas. With trails on, each frame is blended
-// over the previous ones instead of replacing them.
+// Draws straight onto the visible canvas.
 export function createWarp(canvas: HTMLCanvasElement) {
   const gl = canvas.getContext("webgl", { preserveDrawingBuffer: true, alpha: false });
   if (!gl) throw new Error("WebGL not available");
@@ -75,15 +73,12 @@ export function createWarp(canvas: HTMLCanvasElement) {
   const uSize = gl.getUniformLocation(program, "u_size");
   const uAspect = gl.getUniformLocation(program, "u_aspect");
   const uBulge = gl.getUniformLocation(program, "u_bulge");
-  const uAlpha = gl.getUniformLocation(program, "u_alpha");
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   const flat = new Float32Array(SLOTS * 4);
   const shapes = new Float32Array(SLOTS * 2);
   const uShape = gl.getUniformLocation(program, "u_shape");
 
   // `bulges` are final: strength applied and centres settled.
-  function draw(video: HTMLVideoElement, bulges: Bulge[], trails: boolean) {
+  function draw(video: HTMLVideoElement, bulges: Bulge[]) {
     const w = video.videoWidth;
     const h = video.videoHeight;
     if (canvas.width !== w || canvas.height !== h) {
@@ -100,8 +95,7 @@ export function createWarp(canvas: HTMLCanvasElement) {
     gl!.uniform1f(uAspect, w / h);
     gl!.uniform4fv(uBulge, flat);
     gl!.uniform2fv(uShape, shapes);
-    gl!.uniform1f(uAlpha, trails ? 0.3 : 1);
-    gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
+        gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
   }
 
   return { draw };

@@ -57,7 +57,6 @@ export default function App() {
   const [phase, setPhase] = useState<Phase>("intro");
   const [strength, setStrength] = useState(1);
   const [showLabels, setShowLabels] = useState(true);
-  const [trails, setTrails] = useState(false);
   const [recording, setRecording] = useState(false);
   const [seenHands, setSeenHands] = useState(false);
 
@@ -66,8 +65,8 @@ export default function App() {
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const recCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
-  const options = useRef({ strength, showLabels, trails });
-  options.current = { strength, showLabels, trails };
+  const options = useRef({ strength, showLabels });
+  options.current = { strength, showLabels };
 
   const active = phase === "loading" || phase === "running";
 
@@ -122,7 +121,7 @@ export default function App() {
             b.bulges.map((x) => ({ ...x, s: Math.max(-0.7, Math.min(0.9, x.s * o.strength)) })),
             aspect,
           );
-          warp.draw(video, bulges, o.trails);
+          warp.draw(video, bulges);
           renderer.draw(video.videoWidth, video.videoHeight, {
             tracking,
             bulges,
@@ -224,9 +223,6 @@ export default function App() {
             <div className="row">
               <button type="button" aria-pressed={showLabels} onClick={() => setShowLabels((v) => !v)}>
                 {content.labels}
-              </button>
-              <button type="button" aria-pressed={trails} onClick={() => setTrails((v) => !v)}>
-                {content.trails}
               </button>
               <button type="button" onClick={savePhoto}>
                 {content.photo}
