@@ -1,0 +1,158 @@
+:root {
+  --bg: #12123f;
+  --fg: #f5f3ee;
+  --blue: #6f74ff;
+  --red: #ff7a52;
+  --yellow: #ffd426;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  -webkit-font-smoothing: antialiased;
+}
+
+.intro {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.25rem;
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+h1 {
+  margin: 0;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: clamp(2.25rem, 9vw, 4rem);
+  line-height: 1;
+}
+
+p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.muted {
+  opacity: 0.65;
+  font-size: 0.8rem;
+}
+
+.error {
+  color: var(--red);
+}
+
+button,
+.button {
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--fg);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+button:hover,
+button:focus-visible {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color: #0a0a0a;
+}
+
+.primary {
+  align-self: flex-start;
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+a {
+  color: var(--fg);
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+  background: #000;
+}
+
+.stage canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+}
+
+.hint {
+  position: absolute;
+  top: max(1rem, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.35rem 0.75rem;
+  background: rgba(18, 18, 63, 0.75);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: opacity 0.6s;
+}
+
+.controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem max(0.75rem, env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgba(18, 18, 63, 0.85));
+}
+
+.controls label {
+  display: flex;
+  flex: 1 1 12rem;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.controls input[type="range"] {
+  flex: 1;
+  accent-color: var(--yellow);
+}
+
+.controls button {
+  background: rgba(18, 18, 63, 0.6);
+}
