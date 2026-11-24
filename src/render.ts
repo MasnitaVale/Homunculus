@@ -1,5 +1,5 @@
-// Composes what you see: the warped image, optional trails, the tracking overlay
-// (points, lines, labels, contact flares), or the slow "scanner" sweep.
+// Draws the tracking overlay on a transparent layer above the warped image:
+// points, lines, labels and contact flares.
 
 import { content, type Mode } from "./content";
 import type { Bulge, Contact, Label } from "./body";
@@ -22,29 +22,11 @@ export type Frame = {
   contacts: Contact[];
   mode: Mode;
   showLabels: boolean;
-  trails: boolean;
   aspect: number;
 };
 
 export function createRenderer(out: HTMLCanvasElement) {
   const ctx = out.getContext("2d")!;
-  const base = document.createElement("canvas");
-  const baseCtx = base.getContext("2d")!;
-  const scan = document.createElement("canvas");
-  const scanCtx = scan.getContext("2d")!;
-  let scanX = 0;
-  let seedScan = true;
-  let lastTime = performance.now();
-
-  function size(w: number, h: number) {
-    for (const c of [out, base, scan]) {
-      if (c.width !== w || c.height !== h) {
-        c.width = w;
-        c.height = h;
-        if (c === scan) scanX = 0;
-      }
-    }
-  }
 
   // Where a point of the camera image ends up after the warp (the shader works
   // backwards, so this inverts it numerically, bulge by bulge).
@@ -73,49 +55,14 @@ export function createRenderer(out: HTMLCanvasElement) {
     return { x: px, y: py };
   }
 
-  function draw(warped: HTMLCanvasElement, f: Frame) {
-    const W = warped.width;
-    const H = warped.height;
+  function draw(W: number, H: number, f: Frame) {
     if (!W || !H) return;
-    size(W, H);
+    if (out.width !== W || out.height !== H) {
+      out.width = W;
+      out.height = H;
+    } else ctx.clearRect(0, 0, W, H);
     const now = performance.now();
-    const dt = Math.min(0.1, (now - lastTime) / 1000);
-    lastTime = now;
     const u = H / 720;
-
-    if (f.mode === "scanner") {
-      // A bar sweeps across; only the strip under it is updated, like the book scanner wand.
-      if (seedScan) {
-        scanCtx.drawImage(warped, 0, 0);
-        seedScan = false;
-      }
-      const next = scanX + (W / 3.5) * dt;
-      const copy = (from: number, to: number) => {
-        const w = Math.max(1, Math.ceil(to - from));
-        scanCtx.drawImage(warped, Math.floor(from), 0, w, H, Math.floor(from), 0, w, H);
-      };
-      if (next < W) copy(scanX, next);
-      else {
-        copy(scanX, W);
-        copy(0, next - W);
-      }
-      scanX = next % W;
-      ctx.drawImage(scan, 0, 0);
-      const grad = ctx.createLinearGradient(scanX - 30 * u, 0, scanX + 4 * u, 0);
-      grad.addColorStop(0, "rgba(255,212,38,0)");
-      grad.addColorStop(1, "rgba(255,212,38,0.55)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(scanX - 30 * u, 0, 34 * u, H);
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(scanX, 0, 2 * u, H);
-      return;
-    }
-
-    // Trails: blend each new frame over the old ones instead of replacing them.
-    baseCtx.globalAlpha = f.trails ? 0.32 : 1;
-    baseCtx.drawImage(warped, 0, 0);
-    baseCtx.globalAlpha = 1;
-    ctx.drawImage(base, 0, 0);
 
     if (!f.showLabels) {
       drawContacts(f, W, H, u, now);
@@ -236,10 +183,5 @@ export function createRenderer(out: HTMLCanvasElement) {
     }
   }
 
-  function clearScan() {
-    seedScan = true;
-    scanX = 0;
-  }
-
-  return { draw, clearScan };
+  return { draw };
 }

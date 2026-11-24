@@ -63,8 +63,9 @@ export default function App() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const overlayRef = useRef<HTMLCanvasElement>(null);
+  const recCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
-  const clearScanRef = useRef<(() => void) | null>(null);
   const options = useRef({ mode, strength, showLabels, trails });
   options.current = { mode, strength, showLabels, trails };
 
@@ -105,9 +106,8 @@ export default function App() {
       if (stopped) return;
 
       const body = createBody();
-      const warp = createWarp();
-      const renderer = createRenderer(canvasRef.current!);
-      clearScanRef.current = renderer.clearScan;
+      const warp = createWarp(canvasRef.current!);
+      const renderer = createRenderer(overlayRef.current!);
       setPhase("running");
 
       const loop = () => {
@@ -118,17 +118,23 @@ export default function App() {
           const tracking = tracker!.detect(video);
           if (tracking.hands.length) setSeenHands(true);
           const b = body.update(tracking, aspect, o.mode);
-          const warped = warp.draw(video, b.bulges, o.strength);
-          renderer.draw(warped, {
+          warp.draw(video, b.bulges, o.strength, o.trails);
+          renderer.draw(video.videoWidth, video.videoHeight, {
             tracking,
             bulges: b.bulges.map((x) => ({ ...x, s: Math.max(-0.7, Math.min(0.9, x.s * o.strength)) })),
             labels: b.labels,
             contacts: b.contacts,
             mode: o.mode,
             showLabels: o.showLabels,
-            trails: o.trails,
             aspect,
           });
+          // While recording, combine both layers into the canvas being recorded.
+          const rec = recCanvasRef.current;
+          if (rec) {
+            const rctx = rec.getContext("2d")!;
+            rctx.drawImage(canvasRef.current!, 0, 0, rec.width, rec.height);
+            rctx.drawImage(overlayRef.current!, 0, 0, rec.width, rec.height);
+          }
         }
         raf = requestAnimationFrame(loop);
       };
@@ -144,12 +150,19 @@ export default function App() {
     };
   }, [active]);
 
-  const chooseMode = (m: Mode) => {
-    if (m === "scanner") clearScanRef.current?.();
-    setMode(m);
+  // Both layers (image + labels) flattened into one picture.
+  const flatten = () => {
+    const base = canvasRef.current!;
+    const c = document.createElement("canvas");
+    c.width = base.width;
+    c.height = base.height;
+    const cx = c.getContext("2d")!;
+    cx.drawImage(base, 0, 0);
+    cx.drawImage(overlayRef.current!, 0, 0);
+    return c;
   };
 
-  const savePhoto = () => canvasRef.current?.toBlob((b) => b && download(b, "homunculus.png"), "image/png");
+  const savePhoto = () => flatten().toBlob((b) => b && download(b, "homunculus.png"), "image/png");
 
   const toggleRecording = () => {
     const current = recorderRef.current;
@@ -157,13 +170,15 @@ export default function App() {
       current.stop();
       return;
     }
-    const canvas = canvasRef.current;
-    if (!canvas || typeof MediaRecorder === "undefined") return;
+    if (!canvasRef.current || typeof MediaRecorder === "undefined") return;
+    const canvas = flatten();
+    recCanvasRef.current = canvas;
     const type = ["video/mp4", "video/webm;codecs=vp9", "video/webm"].find((t) => MediaRecorder.isTypeSupported(t));
     const recorder = new MediaRecorder(canvas.captureStream(30), type ? { mimeType: type } : undefined);
     const chunks: Blob[] = [];
     recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
     recorder.onstop = () => {
+      recCanvasRef.current = null;
       setRecording(false);
       const blob = new Blob(chunks, { type: recorder.mimeType });
       download(blob, `homunculus.${recorder.mimeType.includes("mp4") ? "mp4" : "webm"}`);
@@ -180,6 +195,7 @@ export default function App() {
     <main className="stage">
       <video ref={videoRef} playsInline muted hidden />
       <canvas ref={canvasRef} aria-label={content.title} />
+      <canvas ref={overlayRef} className="overlay" aria-hidden="true" />
       {phase === "loading" ? <p className="status">{content.loading}</p> : null}
       {phase === "running" ? (
         <>
@@ -193,7 +209,7 @@ export default function App() {
           <div className="controls">
             <div className="row" role="group" aria-label="Mode">
               {(Object.keys(content.modes) as Mode[]).map((m) => (
-                <button key={m} type="button" aria-pressed={mode === m} onClick={() => chooseMode(m)}>
+                <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}>
                   {content.modes[m]}
                 </button>
               ))}

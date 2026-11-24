@@ -14,6 +14,7 @@ uniform sampler2D u_video;
 uniform vec2 u_size;
 uniform float u_aspect;
 uniform vec4 u_bulge[${SLOTS}];
+uniform float u_alpha;
 
 void main() {
   // Screen position, origin top-left, mirrored like a real mirror.
@@ -31,12 +32,13 @@ void main() {
     }
   }
 
-  gl_FragColor = texture2D(u_video, clamp(p, 0.0, 1.0));
+  gl_FragColor = vec4(texture2D(u_video, clamp(p, 0.0, 1.0)).rgb, u_alpha);
 }
 `;
 
-export function createWarp() {
-  const canvas = document.createElement("canvas");
+// Draws straight onto the visible canvas. With trails on, each frame is blended
+// over the previous ones instead of replacing them.
+export function createWarp(canvas: HTMLCanvasElement) {
   const gl = canvas.getContext("webgl", { preserveDrawingBuffer: true, alpha: false });
   if (!gl) throw new Error("WebGL not available");
 
@@ -68,10 +70,12 @@ export function createWarp() {
   const uSize = gl.getUniformLocation(program, "u_size");
   const uAspect = gl.getUniformLocation(program, "u_aspect");
   const uBulge = gl.getUniformLocation(program, "u_bulge");
+  const uAlpha = gl.getUniformLocation(program, "u_alpha");
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   const flat = new Float32Array(SLOTS * 4);
 
-  // Renders one frame and returns the canvas holding it.
-  function draw(video: HTMLVideoElement, bulges: Bulge[], strength: number) {
+  function draw(video: HTMLVideoElement, bulges: Bulge[], strength: number, trails: boolean) {
     const w = video.videoWidth;
     const h = video.videoHeight;
     if (canvas.width !== w || canvas.height !== h) {
@@ -87,8 +91,8 @@ export function createWarp() {
     gl!.uniform2f(uSize, w, h);
     gl!.uniform1f(uAspect, w / h);
     gl!.uniform4fv(uBulge, flat);
+    gl!.uniform1f(uAlpha, trails ? 0.3 : 1);
     gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
-    return canvas;
   }
 
   return { draw };

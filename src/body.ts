@@ -13,7 +13,7 @@ export type Contact = { x: number; y: number; since: number };
 type Kind = "hand" | "lips" | "face" | "torso" | "shoulders" | "foot" | "contact";
 
 // How strongly each kind grows or shrinks in each map.
-const STRENGTH: Record<Exclude<Mode, "scanner">, Record<Kind, number>> = {
+const STRENGTH: Record<Mode, Record<Kind, number>> = {
   touch: { hand: 0.72, lips: 0.6, face: 0.3, torso: -0.45, shoulders: -0.35, foot: 0.5, contact: 0.45 },
   movement: { hand: 0.78, lips: 0.5, face: 0.22, torso: -0.5, shoulders: -0.4, foot: 0.45, contact: 0.35 },
 };
@@ -95,7 +95,7 @@ export function createBody() {
     const now = performance.now();
     const dt = Math.max(1 / 120, Math.min(0.1, (now - last) / 1000));
     last = now;
-    const strength = STRENGTH[mode === "scanner" ? "touch" : mode];
+    const strength = STRENGTH[mode];
     const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
       Math.hypot((a.x - b.x) * aspect, a.y - b.y);
     const mean = (pts: { x: number; y: number }[]) => ({

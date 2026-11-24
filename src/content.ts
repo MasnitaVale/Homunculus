@@ -1,6 +1,6 @@
 // All text shown in the app. Edit the strings; keep the quotes and commas.
 
-export type Mode = "touch" | "movement" | "scanner";
+export type Mode = "touch" | "movement";
 export type PartId = "hands" | "lips" | "mouth" | "face" | "feet" | "torso" | "contact";
 
 export const content = {
@@ -31,7 +31,7 @@ export const content = {
   loading: "Waking up the mirror…",
   hint: "Show your hands. Touch your face.",
 
-  modes: { touch: "Touch", movement: "Movement", scanner: "Scanner" } as Record<Mode, string>,
+  modes: { touch: "Touch", movement: "Movement" } as Record<Mode, string>,
   labels: "Labels",
   trails: "Trails",
   strength: "Strength",
