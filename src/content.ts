@@ -48,12 +48,12 @@ export const content = {
   // not measurements. Change them here if you find better sources.
   sharesNote: "Shares ≈ rough estimates after Penfield's homunculus (1950), not measurements.",
   parts: {
-    hands: { label: "Hands", latin: "Manus", touch: 24 },
-    lips: { label: "Lips", latin: "Labia", touch: 11 },
-    mouth: { label: "Mouth & tongue", latin: "Os et lingua", touch: 7 },
-    face: { label: "Face", latin: "Facies", touch: 9 },
-    feet: { label: "Feet", latin: "Pes", touch: 6 },
-    torso: { label: "Torso", latin: "Truncus", touch: 3 },
-    contact: { label: "Contact", latin: "Tactus", touch: 0 },
-  } as Record<PartId, { label: string; latin: string; touch: number }>,
+    hands: { label: "Hands", touch: 24 },
+    lips: { label: "Lips", touch: 11 },
+    mouth: { label: "Mouth & tongue", touch: 7 },
+    face: { label: "Face", touch: 9 },
+    feet: { label: "Feet", touch: 6 },
+    torso: { label: "Torso", touch: 3 },
+    contact: { label: "Contact", touch: 0 },
+  } as Record<PartId, { label: string; touch: number }>,
 };
