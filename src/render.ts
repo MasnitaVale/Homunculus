@@ -5,6 +5,7 @@
 import { content, type PartId } from "./content";
 import { SLOT_KINDS, type Bulge, type Contact, type Kind } from "./body";
 import type { Tracking } from "./tracker";
+import { forward } from "./geometry";
 
 const LINE = "245,243,238";
 const EMBER = "255,122,82";
@@ -24,7 +25,7 @@ const PART: Record<Kind, PartId | null> = {
 
 export type Frame = {
   tracking: Tracking;
-  bulges: Bulge[]; // with the final strength already applied
+  bulges: Bulge[]; // final: strength applied and centres settled
   contacts: Contact[];
   mouthOpen: number;
   showLabels: boolean;
@@ -33,33 +34,6 @@ export type Frame = {
 
 export function createRenderer(out: HTMLCanvasElement) {
   const ctx = out.getContext("2d")!;
-
-  // Where a point of the camera image ends up after the warp (the shader works
-  // backwards, so this inverts it numerically, bulge by bulge).
-  function forward(x: number, y: number, bulges: Bulge[], aspect: number) {
-    let px = x;
-    let py = y;
-    for (let i = bulges.length - 1; i >= 0; i--) {
-      const b = bulges[i];
-      if (Math.abs(b.s) < 0.001 || b.r <= 0) continue;
-      const dx = px - b.x;
-      const dy = py - b.y;
-      const rs = Math.hypot(dx * aspect, dy) / b.r;
-      if (rs >= 1 || rs === 0) continue;
-      let lo = 0;
-      let hi = 1;
-      for (let k = 0; k < 14; k++) {
-        const mid = (lo + hi) / 2;
-        const kk = 1 - mid * mid;
-        if (mid * (1 - b.s * kk * kk) < rs) lo = mid;
-        else hi = mid;
-      }
-      const scale = (lo + hi) / 2 / rs;
-      px = b.x + dx * scale;
-      py = b.y + dy * scale;
-    }
-    return { x: px, y: py };
-  }
 
   // Text with a soft dark edge so it reads on any background.
   function text(s: string, x: number, y: number, size: number, alpha: number, color = LINE) {
@@ -90,8 +64,9 @@ export function createRenderer(out: HTMLCanvasElement) {
         const strength = Math.abs(b.s);
         if (!part || strength < 0.04 || b.r <= 0) return;
         const alpha = Math.min(1, strength / 0.25);
-        const x = (1 - b.x) * W;
-        const y = b.y * H;
+        const c = forward(b.x, b.y, f.bulges.slice(0, i), f.aspect);
+        const x = (1 - c.x) * W;
+        const y = c.y * H;
         const r = b.r * H;
 
         // Ring on the edge of the distortion: solid where the body grows,
@@ -100,7 +75,8 @@ export function createRenderer(out: HTMLCanvasElement) {
         ctx.lineWidth = 3 * u;
         ctx.strokeStyle = `rgba(${INK},${0.25 * alpha})`;
         ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
+        // The picture is mirrored, so the tilt flips direction on screen.
+        ctx.ellipse(x, y, r * b.e, r, -b.a, 0, Math.PI * 2);
         ctx.stroke();
         ctx.lineWidth = 1 * u;
         ctx.strokeStyle = `rgba(${LINE},${0.75 * alpha})`;

@@ -4,6 +4,7 @@ import { createTracker } from "./tracker";
 import { createBody } from "./body";
 import { createWarp } from "./warp";
 import { createRenderer } from "./render";
+import { settle } from "./geometry";
 
 type Phase = "intro" | "loading" | "running" | "camera-error" | "load-error";
 const MAX_RECORDING_MS = 10_000;
@@ -117,10 +118,14 @@ export default function App() {
           const tracking = tracker!.detect(video);
           if (tracking.hands.length) setSeenHands(true);
           const b = body.update(tracking, aspect);
-          warp.draw(video, b.bulges, o.strength, o.trails);
+          const bulges = settle(
+            b.bulges.map((x) => ({ ...x, s: Math.max(-0.7, Math.min(0.9, x.s * o.strength)) })),
+            aspect,
+          );
+          warp.draw(video, bulges, o.trails);
           renderer.draw(video.videoWidth, video.videoHeight, {
             tracking,
-            bulges: b.bulges.map((x) => ({ ...x, s: Math.max(-0.7, Math.min(0.9, x.s * o.strength)) })),
+            bulges,
             contacts: b.contacts,
             mouthOpen: b.mouthOpen,
             showLabels: o.showLabels,

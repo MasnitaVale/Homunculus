@@ -5,8 +5,9 @@ import type { PartId } from "./content";
 import type { Landmarks, Tracking } from "./tracker";
 
 // x/y in video coordinates (0..1, origin top-left), r in units of the video height,
-// s = magnification (positive grows, negative shrinks).
-export type Bulge = { x: number; y: number; r: number; s: number };
+// s = magnification (positive grows, negative shrinks). e stretches the area into an
+// oval (e = width / height, 1 = circle) and a tilts it (radians).
+export type Bulge = { x: number; y: number; r: number; s: number; e: number; a: number };
 export type Label = { part: PartId; x: number; y: number };
 export type Contact = { x: number; y: number; since: number };
 
@@ -51,13 +52,15 @@ class OneEuro {
   }
 }
 
-type Target = { x: number; y: number; r: number; extra?: number } | null;
+type Target = { x: number; y: number; r: number; extra?: number; e?: number; a?: number } | null;
 
 class Slot {
   x = 0.5;
   y = 0.5;
   r = 0;
   s = 0;
+  e = 1;
+  a = 0;
   seen = false;
   private fx = new OneEuro();
   private fy = new OneEuro();
@@ -74,6 +77,9 @@ class Slot {
       this.y = this.fy.filter(t.y, dt);
       this.r = this.fr.filter(t.r, dt);
       this.s += (goal + (t.extra ?? 0) - this.s) * Math.min(1, dt * 6);
+      const k = this.seen ? Math.min(1, dt * 10) : 1;
+      this.e += ((t.e ?? 1) - this.e) * k;
+      this.a += ((t.a ?? 0) - this.a) * k;
       this.seen = true;
     } else {
       this.s += (0 - this.s) * Math.min(1, dt * 5);
@@ -132,7 +138,19 @@ export function createBody() {
       const lipsC = mean([P(f, 61), P(f, 291), P(f, 0), P(f, 17)]);
       const mouthW = dist(P(f, 61), P(f, 291));
       mouthOpen = Math.min(1, Math.max(0, dist(P(f, 13), P(f, 14)) / mouthW - 0.08) * 2.5);
-      targets[2] = { x: lipsC.x, y: lipsC.y, r: mouthW * 0.9, extra: mouthOpen * 0.25 };
+      // Lips: a wide, flat oval along the line between the mouth corners, so it
+      // doesn't reach up into the nose. It gets taller as the mouth opens.
+      const lipsH = dist(P(f, 0), P(f, 17));
+      const r = Math.max(mouthW * 0.4, lipsH * 0.85);
+      const tilt = Math.atan2(P(f, 291).y - P(f, 61).y, (P(f, 291).x - P(f, 61).x) * aspect);
+      targets[2] = {
+        x: lipsC.x,
+        y: lipsC.y,
+        r,
+        e: Math.max(1, (mouthW * 0.8) / r),
+        a: tilt,
+        extra: mouthOpen * 0.25,
+      };
       const fc = mean([P(f, 10), P(f, 152), P(f, 234), P(f, 454)]);
       const fr = dist(P(f, 10), P(f, 152)) * 0.7;
       targets[3] = { x: fc.x, y: fc.y, r: fr };
@@ -198,7 +216,7 @@ export function createBody() {
 
     slots.forEach((slot, i) => slot.update(targets[i], strength[slot.kind], dt));
 
-    const bulges: Bulge[] = slots.map((s) => ({ x: s.x, y: s.y, r: s.r, s: s.s }));
+    const bulges: Bulge[] = slots.map((s) => ({ x: s.x, y: s.y, r: s.r, s: s.s, e: s.e, a: s.a }));
     return { bulges, labels, contacts: contacts.filter(Boolean) as Contact[], mouthOpen };
   }
 

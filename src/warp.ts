@@ -14,6 +14,7 @@ uniform sampler2D u_video;
 uniform vec2 u_size;
 uniform float u_aspect;
 uniform vec4 u_bulge[${SLOTS}];
+uniform vec2 u_shape[${SLOTS}];
 uniform float u_alpha;
 
 void main() {
@@ -25,7 +26,11 @@ void main() {
     vec4 b = u_bulge[i];
     if (abs(b.w) < 0.001 || b.z <= 0.0) continue;
     vec2 d = p - b.xy;
-    float r = length(vec2(d.x * u_aspect, d.y)) / b.z;
+    vec2 q = vec2(d.x * u_aspect, d.y);
+    float c = cos(u_shape[i].y);
+    float s = sin(u_shape[i].y);
+    q = vec2((c * q.x + s * q.y) / u_shape[i].x, -s * q.x + c * q.y);
+    float r = length(q) / b.z;
     if (r < 1.0) {
       float k = 1.0 - r * r;
       p = b.xy + d * (1.0 - b.w * k * k);
@@ -74,8 +79,11 @@ export function createWarp(canvas: HTMLCanvasElement) {
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   const flat = new Float32Array(SLOTS * 4);
+  const shapes = new Float32Array(SLOTS * 2);
+  const uShape = gl.getUniformLocation(program, "u_shape");
 
-  function draw(video: HTMLVideoElement, bulges: Bulge[], strength: number, trails: boolean) {
+  // `bulges` are final: strength applied and centres settled.
+  function draw(video: HTMLVideoElement, bulges: Bulge[], trails: boolean) {
     const w = video.videoWidth;
     const h = video.videoHeight;
     if (canvas.width !== w || canvas.height !== h) {
@@ -85,12 +93,13 @@ export function createWarp(canvas: HTMLCanvasElement) {
     gl!.viewport(0, 0, w, h);
     gl!.texImage2D(gl!.TEXTURE_2D, 0, gl!.RGB, gl!.RGB, gl!.UNSIGNED_BYTE, video);
     bulges.forEach((b, i) => {
-      const s = Math.max(-0.7, Math.min(0.9, b.s * strength));
-      flat.set([b.x, b.y, b.r, s], i * 4);
+      flat.set([b.x, b.y, b.r, b.s], i * 4);
+      shapes.set([b.e, b.a], i * 2);
     });
     gl!.uniform2f(uSize, w, h);
     gl!.uniform1f(uAspect, w / h);
     gl!.uniform4fv(uBulge, flat);
+    gl!.uniform2fv(uShape, shapes);
     gl!.uniform1f(uAlpha, trails ? 0.3 : 1);
     gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
   }
