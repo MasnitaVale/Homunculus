@@ -1,6 +1,5 @@
 // All text shown in the app. Edit the strings; keep the quotes and commas.
 
-export type Mode = "touch" | "movement";
 export type PartId = "hands" | "lips" | "mouth" | "face" | "feet" | "torso" | "contact";
 
 export const content = {
@@ -31,8 +30,7 @@ export const content = {
   loading: "Waking up the mirror…",
   hint: "Show your hands. Touch your face.",
 
-  modes: { touch: "Touch", movement: "Movement" } as Record<Mode, string>,
-  labels: "Labels",
+  labels: "Diagram",
   trails: "Trails",
   strength: "Strength",
   photo: "Photo",
@@ -45,17 +43,17 @@ export const content = {
   loadError: "The mirror couldn't load on this device or browser. Try an up-to-date Chrome or Safari.",
   credit: { label: "Valentina Mașniță", url: "https://valemasnita.com" },
 
-  // Body-part labels and their rough share of the brain's maps.
+  // Body-part labels and their rough share of the brain's touch map.
   // These are approximate, illustrative values read from Penfield's homunculus,
   // not measurements. Change them here if you find better sources.
   sharesNote: "Shares ≈ rough estimates after Penfield's homunculus (1950), not measurements.",
   parts: {
-    hands: { label: "Hands", touch: 24, movement: 30 },
-    lips: { label: "Lips", touch: 11, movement: 8 },
-    mouth: { label: "Mouth & tongue", touch: 7, movement: 12 },
-    face: { label: "Face", touch: 9, movement: 5 },
-    feet: { label: "Feet", touch: 6, movement: 4 },
-    torso: { label: "Torso", touch: 3, movement: 2 },
-    contact: { label: "Contact", touch: 0, movement: 0 },
-  } as Record<PartId, { label: string; touch: number; movement: number }>,
+    hands: { label: "Hands", latin: "Manus", touch: 24 },
+    lips: { label: "Lips", latin: "Labia", touch: 11 },
+    mouth: { label: "Mouth & tongue", latin: "Os et lingua", touch: 7 },
+    face: { label: "Face", latin: "Facies", touch: 9 },
+    feet: { label: "Feet", latin: "Pes", touch: 6 },
+    torso: { label: "Torso", latin: "Truncus", touch: 3 },
+    contact: { label: "Contact", latin: "Tactus", touch: 0 },
+  } as Record<PartId, { label: string; latin: string; touch: number }>,
 };

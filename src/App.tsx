@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { content, type Mode } from "./content";
+import { content } from "./content";
 import { createTracker } from "./tracker";
 import { createBody } from "./body";
 import { createWarp } from "./warp";
@@ -54,7 +54,6 @@ function Intro({ phase, onStart }: { phase: Phase; onStart: () => void }) {
 
 export default function App() {
   const [phase, setPhase] = useState<Phase>("intro");
-  const [mode, setMode] = useState<Mode>("touch");
   const [strength, setStrength] = useState(1);
   const [showLabels, setShowLabels] = useState(true);
   const [trails, setTrails] = useState(false);
@@ -66,8 +65,8 @@ export default function App() {
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const recCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
-  const options = useRef({ mode, strength, showLabels, trails });
-  options.current = { mode, strength, showLabels, trails };
+  const options = useRef({ strength, showLabels, trails });
+  options.current = { strength, showLabels, trails };
 
   const active = phase === "loading" || phase === "running";
 
@@ -117,14 +116,13 @@ export default function App() {
           const aspect = video.videoWidth / video.videoHeight;
           const tracking = tracker!.detect(video);
           if (tracking.hands.length) setSeenHands(true);
-          const b = body.update(tracking, aspect, o.mode);
+          const b = body.update(tracking, aspect);
           warp.draw(video, b.bulges, o.strength, o.trails);
           renderer.draw(video.videoWidth, video.videoHeight, {
             tracking,
             bulges: b.bulges.map((x) => ({ ...x, s: Math.max(-0.7, Math.min(0.9, x.s * o.strength)) })),
-            labels: b.labels,
             contacts: b.contacts,
-            mode: o.mode,
+            mouthOpen: b.mouthOpen,
             showLabels: o.showLabels,
             aspect,
           });
@@ -207,13 +205,6 @@ export default function App() {
             {content.stop}
           </button>
           <div className="controls">
-            <div className="row" role="group" aria-label="Mode">
-              {(Object.keys(content.modes) as Mode[]).map((m) => (
-                <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}>
-                  {content.modes[m]}
-                </button>
-              ))}
-            </div>
             <label className="row">
               {content.strength}
               <input

@@ -1,7 +1,7 @@
 // Turns tracking into homunculus "bulges": which areas grow (hands, lips, face,
 // feet, a touched spot) and which shrink (torso, shoulders), with smoothing.
 
-import type { Mode, PartId } from "./content";
+import type { PartId } from "./content";
 import type { Landmarks, Tracking } from "./tracker";
 
 // x/y in video coordinates (0..1, origin top-left), r in units of the video height,
@@ -10,15 +10,14 @@ export type Bulge = { x: number; y: number; r: number; s: number };
 export type Label = { part: PartId; x: number; y: number };
 export type Contact = { x: number; y: number; since: number };
 
-type Kind = "hand" | "lips" | "face" | "torso" | "shoulders" | "foot" | "contact";
+export type Kind = "hand" | "lips" | "face" | "torso" | "shoulders" | "foot" | "contact";
 
-// How strongly each kind grows or shrinks in each map.
-const STRENGTH: Record<Mode, Record<Kind, number>> = {
-  touch: { hand: 0.72, lips: 0.6, face: 0.3, torso: -0.45, shoulders: -0.35, foot: 0.5, contact: 0.45 },
-  movement: { hand: 0.78, lips: 0.5, face: 0.22, torso: -0.5, shoulders: -0.4, foot: 0.45, contact: 0.35 },
+// How strongly each kind grows (positive) or shrinks (negative).
+const STRENGTH: Record<Kind, number> = {
+  hand: 0.72, lips: 0.6, face: 0.3, torso: -0.45, shoulders: -0.35, foot: 0.5, contact: 0.45,
 };
 
-const SLOT_KINDS: Kind[] = ["hand", "hand", "lips", "face", "torso", "shoulders", "foot", "foot", "contact", "contact"];
+export const SLOT_KINDS: Kind[] = ["hand", "hand", "lips", "face", "torso", "shoulders", "foot", "foot", "contact", "contact"];
 export const SLOTS = SLOT_KINDS.length;
 
 // One Euro filter: smooth when still, responsive when moving fast.
@@ -91,11 +90,11 @@ export function createBody() {
   const contacts: (Contact | null)[] = [null, null];
   let last = performance.now();
 
-  function update(t: Tracking, aspect: number, mode: Mode) {
+  function update(t: Tracking, aspect: number) {
     const now = performance.now();
     const dt = Math.max(1 / 120, Math.min(0.1, (now - last) / 1000));
     last = now;
-    const strength = STRENGTH[mode];
+    const strength = STRENGTH;
     const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
       Math.hypot((a.x - b.x) * aspect, a.y - b.y);
     const mean = (pts: { x: number; y: number }[]) => ({
