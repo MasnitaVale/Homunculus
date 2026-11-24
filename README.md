@@ -11,7 +11,7 @@ Part of the work of [Valentina Mașniță](https://valemasnita.com), about the b
 - **Tracking:** [MediaPipe](https://ai.google.dev/edge/mediapipe) hand and face landmark models find both hands, the lips and the face in each camera frame.
 - **Warp:** a WebGL fragment shader magnifies each area with a smooth radial bulge. Hands and lips grow the most, the face less, in proportion to how much of the brain's touch map they take up.
 - **Shrinking:** body tracking (MediaPipe Pose) finds the shoulders and torso, which shrink, so the contrast with the oversized parts reads as a homunculus rather than a fisheye.
-- **Diagram:** a thin ring sits on the edge of each distortion (solid where the body grows, dashed where it shrinks), labelled with the part's approximate share of the brain's touch map (rough estimates after Penfield, 1950).
+- **Diagram:** a thin ring sits on the edge of each distortion (solid where the body grows, dashed where it shrinks), labelled with the part's share of the brain's primary touch area (S1) as measured with fMRI by Saadon-Grosman, Loewenstein & Arzy (2020, Brain Communications, doi:10.1093/braincomms/fcaa003): upper limb 46%, lips 29%, trunk 16%, lower limb 9%.
 - **Contact:** a fingertip touching the face or the other hand flares and swells at the point of contact.
 - **Photo, Record:** still images and up to 10-second clips, saved only on the device.
 - **Smoothing:** a One Euro filter on every tracked part keeps the warp steady when still and responsive when moving.

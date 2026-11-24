@@ -109,7 +109,7 @@ export function createRenderer(out: HTMLCanvasElement) {
         // Shrinking parts (torso) sit below the face, so their label goes in the
         // middle of the ring instead of on top, where it would cover the mouth.
         const ly = grows ? y - r * 1.04 - 6 * u : y;
-        text(`${info.label} · ${info.touch}%`, x, ly, 15 * u, alpha);
+        text(info.touch === null ? info.label : `${info.label} · ${info.touch}%`, x, ly, 15 * u, alpha);
       });
     }
 

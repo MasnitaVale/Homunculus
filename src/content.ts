@@ -6,22 +6,23 @@ export const content = {
   title: "Homunculus Mirror",
 
   // Start screen, laid out in scattered fragments.
-  // The "map" words are sized by how much of the brain's touch map they take up.
+  // The "map" words are sized roughly by their share of the primary touch area
+  // (see `parts` below); face and tongue follow Penfield's drawing.
   map: [
     { word: "hands", size: 6 },
-    { word: "torso", size: 0.8 },
-    { word: "lips", size: 4.4 },
-    { word: "back", size: 0.7 },
-    { word: "face", size: 3.4 },
-    { word: "legs", size: 0.8 },
-    { word: "tongue", size: 2.6 },
-    { word: "feet", size: 1.8 },
-    { word: "arms", size: 1 },
+    { word: "trunk", size: 2.1 },
+    { word: "lips", size: 3.8 },
+    { word: "back", size: 1 },
+    { word: "face", size: 3 },
+    { word: "legs", size: 1.2 },
+    { word: "tongue", size: 2.4 },
+    { word: "feet", size: 1.2 },
+    { word: "arms", size: 1.6 },
   ],
   fragments: [
     { text: "The sensory homunculus", at: "left", size: "lg" },
     { text: "is the body as the brain feels it:", at: "right", size: "md" },
-    { text: "enormous hands, lips and face, a body shrunk to almost nothing.", at: "indent", size: "sm" },
+    { text: "enormous hands and lips, a small trunk and legs.", at: "indent", size: "sm" },
     { text: "This mirror draws that map onto you.", at: "center", size: "lg" },
   ] as { text: string; at: "left" | "right" | "center" | "indent"; size: "sm" | "md" | "lg" }[],
   privacy:
@@ -42,17 +43,21 @@ export const content = {
   loadError: "The mirror couldn't load on this device or browser. Try an up-to-date Chrome or Safari.",
   credit: { label: "Valentina Mașniță", url: "https://valemasnita.com" },
 
-  // Body-part labels and their rough share of the brain's touch map.
-  // These are approximate, illustrative values read from Penfield's homunculus,
-  // not measurements. Change them here if you find better sources.
-  sharesNote: "Shares ≈ rough estimates after Penfield's homunculus (1950), not measurements.",
+  // Body-part labels and their share of the primary touch area of the brain (S1),
+  // measured with fMRI in 20 people: Saadon-Grosman, Loewenstein & Arzy (2020),
+  // "The 'creatures' of the human cortical somatosensory system", Brain Communications
+  // 2(1): fcaa003, doi:10.1093/braincomms/fcaa003. The study grouped the body into
+  // upper limb 46.3%, lips 28.9%, trunk 15.8% and lower limb 9.1%. Face and tongue
+  // were not measured, so they have no number (null).
+  sharesNote:
+    "Shares of the brain's primary touch area (S1), measured with fMRI in 20 people: Saadon-Grosman, Loewenstein & Arzy, Brain Communications (2020). Face not measured.",
   parts: {
-    hands: { label: "Hands", touch: 24 },
-    lips: { label: "Lips", touch: 11 },
-    mouth: { label: "Mouth & tongue", touch: 7 },
-    face: { label: "Face", touch: 9 },
-    feet: { label: "Feet", touch: 6 },
-    torso: { label: "Torso", touch: 3 },
-    contact: { label: "Contact", touch: 0 },
-  } as Record<PartId, { label: string; touch: number }>,
+    hands: { label: "Arm & hand", touch: 46 },
+    lips: { label: "Lips", touch: 29 },
+    mouth: { label: "Lips", touch: 29 },
+    face: { label: "Face", touch: null },
+    feet: { label: "Leg & foot", touch: 9 },
+    torso: { label: "Trunk", touch: 16 },
+    contact: { label: "Contact", touch: null },
+  } as Record<PartId, { label: string; touch: number | null }>,
 };
