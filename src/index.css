@@ -29,11 +29,72 @@ body {
   display: flex;
   min-height: 100%;
   flex-direction: column;
-  justify-content: center;
-  gap: 1.25rem;
-  max-width: 36rem;
+  gap: 2rem;
+  max-width: 60rem;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 2.5rem 1rem;
+}
+
+/* Body words sized like the homunculus: huge hands and lips, tiny torso. */
+.map {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1em 0.45em;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(0.75rem, 2.6vw, 1.3rem);
+  line-height: 0.95;
+  color: var(--blue);
+}
+
+.map span:nth-child(even) {
+  color: var(--fg);
+  opacity: 0.55;
+}
+
+.fragments {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.frag {
+  max-width: 80%;
+}
+
+.at-left { margin-right: auto; }
+.at-right { margin-left: auto; text-align: right; }
+.at-center { margin: 0 auto; text-align: center; }
+.at-indent { margin-left: 14%; margin-right: auto; }
+
+.size-sm {
+  max-width: 20rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.size-md { font-size: 1rem; }
+
+.size-lg {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.5rem, 6vw, 2.5rem);
+  line-height: 1.1;
+}
+
+.plain {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 36rem;
+  margin-top: auto;
+}
+
+.small {
+  font-size: 0.7rem;
 }
 
 h1 {
@@ -131,21 +192,24 @@ a {
   right: 0;
   bottom: 0;
   display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 2rem 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgba(18, 18, 63, 0.9));
+}
+
+.controls .row {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem max(0.75rem, env(safe-area-inset-bottom));
-  background: linear-gradient(transparent, rgba(18, 18, 63, 0.85));
+  gap: 0.4rem;
 }
 
 .controls label {
-  display: flex;
-  flex: 1 1 12rem;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  gap: 0.75rem;
 }
 
 .controls input[type="range"] {
@@ -154,5 +218,43 @@ a {
 }
 
 .controls button {
+  min-height: 2.5rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.7rem;
   background: rgba(18, 18, 63, 0.6);
+}
+
+.controls button[aria-pressed="true"] {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: var(--fg);
+}
+
+.controls button.recording {
+  background: var(--red);
+  border-color: var(--red);
+  color: #0a0a0a;
+}
+
+.rec {
+  position: absolute;
+  top: max(1rem, env(safe-area-inset-top));
+  right: 1rem;
+  color: var(--red);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+}
+
+.exit {
+  position: absolute;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: 0.75rem;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.7rem;
+  background: rgba(18, 18, 63, 0.6);
+}
+
+.hint {
+  top: max(4rem, calc(env(safe-area-inset-top) + 3.25rem));
 }

@@ -1,6 +1,7 @@
-// Draws the mirrored camera image with WebGL, magnifying each bulge.
+// Draws the mirrored camera image with WebGL: magnifies some areas (hands, lips…)
+// and shrinks others (torso, shoulders).
 
-import { SLOTS, type Bulge } from "./tracker";
+import { SLOTS, type Bulge } from "./body";
 
 const VERT = `
 attribute vec2 a_pos;
@@ -21,7 +22,7 @@ void main() {
 
   for (int i = 0; i < ${SLOTS}; i++) {
     vec4 b = u_bulge[i];
-    if (b.w <= 0.0 || b.z <= 0.0) continue;
+    if (abs(b.w) < 0.001 || b.z <= 0.0) continue;
     vec2 d = p - b.xy;
     float r = length(vec2(d.x * u_aspect, d.y)) / b.z;
     if (r < 1.0) {
@@ -34,8 +35,9 @@ void main() {
 }
 `;
 
-export function createWarp(canvas: HTMLCanvasElement) {
-  const gl = canvas.getContext("webgl", { preserveDrawingBuffer: true });
+export function createWarp() {
+  const canvas = document.createElement("canvas");
+  const gl = canvas.getContext("webgl", { preserveDrawingBuffer: true, alpha: false });
   if (!gl) throw new Error("WebGL not available");
 
   const shader = (type: number, src: string) => {
@@ -68,21 +70,25 @@ export function createWarp(canvas: HTMLCanvasElement) {
   const uBulge = gl.getUniformLocation(program, "u_bulge");
   const flat = new Float32Array(SLOTS * 4);
 
+  // Renders one frame and returns the canvas holding it.
   function draw(video: HTMLVideoElement, bulges: Bulge[], strength: number) {
     const w = video.videoWidth;
     const h = video.videoHeight;
-    if (!w || !h) return;
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
       canvas.height = h;
     }
     gl!.viewport(0, 0, w, h);
     gl!.texImage2D(gl!.TEXTURE_2D, 0, gl!.RGB, gl!.RGB, gl!.UNSIGNED_BYTE, video);
-    bulges.forEach((b, i) => flat.set([b.x, b.y, b.r, Math.min(0.88, b.s * strength)], i * 4));
+    bulges.forEach((b, i) => {
+      const s = Math.max(-0.7, Math.min(0.9, b.s * strength));
+      flat.set([b.x, b.y, b.r, s], i * 4);
+    });
     gl!.uniform2f(uSize, w, h);
     gl!.uniform1f(uAspect, w / h);
     gl!.uniform4fv(uBulge, flat);
     gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
+    return canvas;
   }
 
   return { draw };

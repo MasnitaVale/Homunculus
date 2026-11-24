@@ -1,48 +1,91 @@
 import { useEffect, useRef, useState } from "react";
-import { content } from "./content";
-import { createTracker, SLOTS, type Bulge } from "./tracker";
+import { content, type Mode } from "./content";
+import { createTracker } from "./tracker";
+import { createBody } from "./body";
 import { createWarp } from "./warp";
+import { createRenderer } from "./render";
 
 type Phase = "intro" | "loading" | "running" | "camera-error" | "load-error";
+const MAX_RECORDING_MS = 10_000;
 
-// Moves the drawn bulges smoothly toward what the tracker found, and fades
-// them out when a hand or face disappears.
-function follow(current: Bulge[], targets: (Bulge | null)[]) {
-  targets.forEach((t, i) => {
-    const c = current[i];
-    if (t) {
-      const fresh = c.s === 0;
-      const k = fresh ? 1 : 0.45;
-      c.x += (t.x - c.x) * k;
-      c.y += (t.y - c.y) * k;
-      c.r += (t.r - c.r) * k;
-      c.s += (t.s - c.s) * 0.25;
-    } else {
-      c.s = Math.max(0, c.s - 0.05);
-    }
-  });
+function download(blob: Blob, name: string) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// Start screen: the text scattered across the page, with a "map" of body words
+// sized like the homunculus. Privacy note and Start button stay plain.
+function Intro({ phase, onStart }: { phase: Phase; onStart: () => void }) {
+  return (
+    <main className="intro">
+      <h1>{content.title}</h1>
+      <p className="map" aria-hidden="true">
+        {content.map.map((m) => (
+          <span key={m.word} style={{ fontSize: `${m.size}em` }}>
+            {m.word}
+          </span>
+        ))}
+      </p>
+      <div className="fragments">
+        {content.fragments.map((f) => (
+          <p key={f.text} className={`frag at-${f.at} size-${f.size}`}>
+            {f.text}
+          </p>
+        ))}
+      </div>
+      <div className="plain">
+        <p className="muted">{content.privacy}</p>
+        {phase === "camera-error" ? <p className="error">{content.cameraError}</p> : null}
+        {phase === "load-error" ? <p className="error">{content.loadError}</p> : null}
+        <button type="button" className="primary" onClick={onStart}>
+          {content.start}
+        </button>
+        <p className="muted small">{content.sharesNote}</p>
+        <p className="muted small">
+          <a href={content.credit.url}>{content.credit.label}</a>
+        </p>
+      </div>
+    </main>
+  );
 }
 
 export default function App() {
   const [phase, setPhase] = useState<Phase>("intro");
+  const [mode, setMode] = useState<Mode>("touch");
   const [strength, setStrength] = useState(1);
+  const [showLabels, setShowLabels] = useState(true);
+  const [trails, setTrails] = useState(false);
+  const [recording, setRecording] = useState(false);
   const [seenHands, setSeenHands] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const strengthRef = useRef(strength);
-  strengthRef.current = strength;
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const clearScanRef = useRef<(() => void) | null>(null);
+  const options = useRef({ mode, strength, showLabels, trails });
+  options.current = { mode, strength, showLabels, trails };
+
+  const active = phase === "loading" || phase === "running";
 
   useEffect(() => {
-    if (phase !== "loading") return;
+    if (!active) return;
     let stopped = false;
     let raf = 0;
     let stream: MediaStream | null = null;
     let tracker: Awaited<ReturnType<typeof createTracker>> | null = null;
 
     (async () => {
+      const portrait = window.innerHeight > window.innerWidth;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: {
+            facingMode: "user",
+            width: { ideal: portrait ? 720 : 1280 },
+            height: { ideal: portrait ? 1280 : 720 },
+          },
           audio: false,
         });
       } catch {
@@ -61,17 +104,31 @@ export default function App() {
       }
       if (stopped) return;
 
-      const warp = createWarp(canvasRef.current!);
-      const bulges: Bulge[] = Array.from({ length: SLOTS }, () => ({ x: 0.5, y: 0.5, r: 0, s: 0 }));
+      const body = createBody();
+      const warp = createWarp();
+      const renderer = createRenderer(canvasRef.current!);
+      clearScanRef.current = renderer.clearScan;
       setPhase("running");
 
       const loop = () => {
         if (stopped) return;
-        if (video.readyState >= 2) {
-          const targets = tracker!.detect(video, video.videoWidth / video.videoHeight);
-          if (targets[0] || targets[1]) setSeenHands(true);
-          follow(bulges, targets);
-          warp.draw(video, bulges, strengthRef.current);
+        if (video.readyState >= 2 && video.videoWidth) {
+          const o = options.current;
+          const aspect = video.videoWidth / video.videoHeight;
+          const tracking = tracker!.detect(video);
+          if (tracking.hands.length) setSeenHands(true);
+          const b = body.update(tracking, aspect, o.mode);
+          const warped = warp.draw(video, b.bulges, o.strength);
+          renderer.draw(warped, {
+            tracking,
+            bulges: b.bulges.map((x) => ({ ...x, s: Math.max(-0.7, Math.min(0.9, x.s * o.strength)) })),
+            labels: b.labels,
+            contacts: b.contacts,
+            mode: o.mode,
+            showLabels: o.showLabels,
+            trails: o.trails,
+            aspect,
+          });
         }
         raf = requestAnimationFrame(loop);
       };
@@ -81,39 +138,43 @@ export default function App() {
     return () => {
       stopped = true;
       cancelAnimationFrame(raf);
+      recorderRef.current?.state === "recording" && recorderRef.current.stop();
       stream?.getTracks().forEach((t) => t.stop());
       tracker?.close();
     };
-  }, [phase === "loading" || phase === "running"]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active]);
 
-  const savePhoto = () => {
-    canvasRef.current?.toBlob((blob) => {
-      if (!blob) return;
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "homunculus.png";
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    }, "image/png");
+  const chooseMode = (m: Mode) => {
+    if (m === "scanner") clearScanRef.current?.();
+    setMode(m);
   };
 
-  if (phase === "intro" || phase === "camera-error" || phase === "load-error") {
-    return (
-      <main className="intro">
-        <h1>{content.title}</h1>
-        <p>{content.intro}</p>
-        <p className="muted">{content.privacy}</p>
-        {phase === "camera-error" ? <p className="error">{content.cameraError}</p> : null}
-        {phase === "load-error" ? <p className="error">{content.loadError}</p> : null}
-        <button type="button" className="primary" onClick={() => setPhase("loading")}>
-          {content.start}
-        </button>
-        <p className="muted">
-          <a href={content.credit.url}>{content.credit.label}</a>
-        </p>
-      </main>
-    );
-  }
+  const savePhoto = () => canvasRef.current?.toBlob((b) => b && download(b, "homunculus.png"), "image/png");
+
+  const toggleRecording = () => {
+    const current = recorderRef.current;
+    if (current && current.state === "recording") {
+      current.stop();
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas || typeof MediaRecorder === "undefined") return;
+    const type = ["video/mp4", "video/webm;codecs=vp9", "video/webm"].find((t) => MediaRecorder.isTypeSupported(t));
+    const recorder = new MediaRecorder(canvas.captureStream(30), type ? { mimeType: type } : undefined);
+    const chunks: Blob[] = [];
+    recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    recorder.onstop = () => {
+      setRecording(false);
+      const blob = new Blob(chunks, { type: recorder.mimeType });
+      download(blob, `homunculus.${recorder.mimeType.includes("mp4") ? "mp4" : "webm"}`);
+    };
+    recorder.start();
+    recorderRef.current = recorder;
+    setRecording(true);
+    setTimeout(() => recorder.state === "recording" && recorder.stop(), MAX_RECORDING_MS);
+  };
+
+  if (!active) return <Intro phase={phase} onStart={() => setPhase("loading")} />;
 
   return (
     <main className="stage">
@@ -125,8 +186,19 @@ export default function App() {
           <p className="hint" style={{ opacity: seenHands ? 0 : 1 }}>
             {content.hint}
           </p>
+          {recording ? <span className="rec" aria-live="polite">● REC</span> : null}
+          <button type="button" className="exit" onClick={() => setPhase("intro")}>
+            {content.stop}
+          </button>
           <div className="controls">
-            <label>
+            <div className="row" role="group" aria-label="Mode">
+              {(Object.keys(content.modes) as Mode[]).map((m) => (
+                <button key={m} type="button" aria-pressed={mode === m} onClick={() => chooseMode(m)}>
+                  {content.modes[m]}
+                </button>
+              ))}
+            </div>
+            <label className="row">
               {content.strength}
               <input
                 type="range"
@@ -137,12 +209,20 @@ export default function App() {
                 onChange={(e) => setStrength(Number(e.target.value))}
               />
             </label>
-            <button type="button" onClick={savePhoto}>
-              {content.photo}
-            </button>
-            <button type="button" onClick={() => setPhase("intro")}>
-              {content.stop}
-            </button>
+            <div className="row">
+              <button type="button" aria-pressed={showLabels} onClick={() => setShowLabels((v) => !v)}>
+                {content.labels}
+              </button>
+              <button type="button" aria-pressed={trails} onClick={() => setTrails((v) => !v)}>
+                {content.trails}
+              </button>
+              <button type="button" onClick={savePhoto}>
+                {content.photo}
+              </button>
+              <button type="button" className={recording ? "recording" : ""} onClick={toggleRecording}>
+                {recording ? content.stopRecording : content.record}
+              </button>
+            </div>
           </div>
         </>
       ) : null}
