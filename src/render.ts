@@ -7,10 +7,10 @@ import { SLOT_KINDS, type Bulge, type Contact, type Kind } from "./body";
 import type { Tracking } from "./tracker";
 import { forward } from "./geometry";
 
-const LINE = "245,243,238";
+const LINE = "236,222,186"; // warm parchment gold
 const EMBER = "255,122,82";
 const INK = "18,18,63";
-const MONO = '"JetBrains Mono", ui-monospace, monospace';
+const SERIF = 'Georgia, "Times New Roman", serif';
 
 // Which body part each slot stands for (shoulders share the torso's ring).
 const PART: Record<Kind, PartId | null> = {
@@ -37,7 +37,7 @@ export function createRenderer(out: HTMLCanvasElement) {
 
   // Text with a soft dark edge so it reads on any background.
   function text(s: string, x: number, y: number, size: number, alpha: number, color = LINE) {
-    ctx.font = `500 ${size}px ${MONO}`;
+    ctx.font = `italic 400 ${size}px ${SERIF}`;
     ctx.lineWidth = size * 0.28;
     ctx.strokeStyle = `rgba(${INK},${0.55 * alpha})`;
     ctx.strokeText(s, x, y);
@@ -69,23 +69,47 @@ export function createRenderer(out: HTMLCanvasElement) {
         const y = c.y * H;
         const r = b.r * H;
 
-        // Ring on the edge of the distortion: solid where the body grows,
-        // dashed where it shrinks.
-        if (b.s < 0) ctx.setLineDash([6 * u, 6 * u]);
-        ctx.lineWidth = 3 * u;
-        ctx.strokeStyle = `rgba(${INK},${0.25 * alpha})`;
-        ctx.beginPath();
-        // The picture is mirrored, so the tilt flips direction on screen.
-        ctx.ellipse(x, y, r * b.e, r, -b.a, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.lineWidth = 1 * u;
-        ctx.strokeStyle = `rgba(${LINE},${0.75 * alpha})`;
-        ctx.stroke();
+        // Double ring on the edge of the distortion with eight small marks, turning
+        // slowly: solid and clockwise where the body grows, dashed and the other
+        // way where it shrinks. The picture is mirrored, so the tilt flips on screen.
+        const grows = b.s > 0;
+        const spin = (grows ? 1 : -1) * (now / 1000) * 0.12;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(-b.a);
+        ctx.scale(b.e, 1);
+        const ring = (radius: number, width: number) => {
+          ctx.beginPath();
+          ctx.arc(0, 0, radius, 0, Math.PI * 2);
+          ctx.lineWidth = (width + 2) * u;
+          ctx.strokeStyle = `rgba(${INK},${0.22 * alpha})`;
+          ctx.stroke();
+          ctx.lineWidth = width * u;
+          ctx.strokeStyle = `rgba(${LINE},${0.8 * alpha})`;
+          ctx.stroke();
+        };
+        if (!grows) ctx.setLineDash([5 * u, 5 * u]);
+        ring(r, 1.1);
         ctx.setLineDash([]);
+        ring(r * 0.92, 0.6);
+        ctx.beginPath();
+        for (let k = 0; k < 8; k++) {
+          const a = spin + (k * Math.PI) / 4;
+          const inner = k % 2 ? r * 0.92 : r * 0.86;
+          ctx.moveTo(Math.cos(a) * inner, Math.sin(a) * inner);
+          ctx.lineTo(Math.cos(a) * r * 1.04, Math.sin(a) * r * 1.04);
+        }
+        ctx.lineWidth = 1 * u;
+        ctx.strokeStyle = `rgba(${LINE},${0.85 * alpha})`;
+        ctx.stroke();
+        ctx.restore();
 
         if (part === "lips" && f.mouthOpen > 0.25) part = "mouth";
         const info = content.parts[part];
-        text(`${info.label.toUpperCase()} ≈ ${info.touch}%`, x, y - r - 6 * u, 12 * u, alpha);
+        // Shrinking parts (torso) sit below the face, so their label goes in the
+        // middle of the ring instead of on top, where it would cover the mouth.
+        const ly = grows ? y - r * 1.04 - 6 * u : y;
+        text(`${info.label} · ${info.touch}%`, x, ly, 15 * u, alpha);
       });
     }
 
@@ -108,7 +132,7 @@ export function createRenderer(out: HTMLCanvasElement) {
         ctx.arc(X, Y, (10 + phase * 90) * u, 0, Math.PI * 2);
         ctx.stroke();
       }
-      if (f.showLabels) text(content.parts.contact.label.toUpperCase(), X, Y - 64 * u, 12 * u, 0.95, EMBER);
+      if (f.showLabels) text(content.parts.contact.label, X, Y - 64 * u, 15 * u, 0.95, EMBER);
     }
   }
 
